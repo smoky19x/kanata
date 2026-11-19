@@ -62,6 +62,11 @@ pub use sim_passthru::*;
 
 pub const HI_RES_SCROLL_UNITS_IN_LO_RES: u16 = 120;
 
+#[cfg(any(target_os = "macos", test))]
+mod wheel_notches;
+#[cfg(any(target_os = "macos", test))]
+pub use wheel_notches::*;
+
 // ------------------ KeyValue --------------------
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

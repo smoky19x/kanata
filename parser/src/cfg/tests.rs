@@ -1682,6 +1682,7 @@ fn parse_all_defcfg() {
   windows-interception-mouse-hwid "70, 0, 60, 0"
   windows-interception-mouse-hwids ("0, 0, 0" "1, 1, 1")
   windows-interception-keyboard-hwids ("0, 0, 0" "1, 1, 1")
+  macos-mouse-wheel-hid yes
 )
 (defsrc a)
 (deflayer base a)

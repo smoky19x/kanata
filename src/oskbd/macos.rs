@@ -1273,6 +1273,11 @@ pub struct KbdOut {
     /// press kanata just posted, so it cannot be the only source for the
     /// move-versus-drag decision.
     held_buttons: usize,
+    /// `defcfg` `macos-mouse-wheel-hid`: scroll through the virtual HID
+    /// pointing device, with distances in 1/120 notch.
+    mouse_wheel_hid: std::cell::Cell<bool>,
+    /// Wheel distance below one notch, for `mouse_wheel_hid`.
+    wheel_notches: WheelNotches,
 }
 
 /// Number of distinct mouse buttons kanata can synthesize.
@@ -1363,7 +1368,13 @@ impl KbdOut {
             button_path: [None; BUTTON_INDEX_COUNT],
             driven_mouse_position: None,
             held_buttons: 0,
+            mouse_wheel_hid: std::cell::Cell::new(false),
+            wheel_notches: WheelNotches::default(),
         })
+    }
+
+    pub fn update_mouse_wheel_hid(&self, on: bool) {
+        self.mouse_wheel_hid.set(on);
     }
 
     fn write_caps_lock(&mut self, value: u64) -> Result<(), io::Error> {
@@ -1511,26 +1522,54 @@ impl KbdOut {
         event.post(CGEventTapLocation::AnnotatedSession);
         Ok(())
     }
+    /// Scroll by `distance`: lines by default; with `macos-mouse-wheel-hid`,
+    /// 1/120 notch as on Linux and Windows.
+    ///
+    /// With the option, whole notches go through the Karabiner VirtualHIDDevice
+    /// pointing device, as mouse buttons do, so macOS handles them like a
+    /// physical wheel; what is left below a notch is carried to the next
+    /// scroll. While the pointing device is not ready, the same notches go out
+    /// as CGEvent lines, so a config means the same on both paths.
     pub fn scroll(&mut self, direction: MWheelDirection, distance: u16) -> Result<(), io::Error> {
+        if !self.mouse_wheel_hid.get() {
+            return Self::scroll_lines(direction, distance.into());
+        }
+        let notches = self.wheel_notches.add(direction, distance);
+        if notches == 0 {
+            return Ok(());
+        }
+        if !is_pointing_ready() {
+            return Self::scroll_lines(direction, notches.unsigned_abs().into());
+        }
+        // HID wheel values: positive = up (away from the user) or right.
+        let vertical = matches!(direction, MWheelDirection::Up | MWheelDirection::Down);
+        for value in hid_wheel_values(notches) {
+            if vertical {
+                pointing_post_motion(0, 0, value, 0);
+            } else {
+                pointing_post_motion(0, 0, 0, value);
+            }
+        }
+        Ok(())
+    }
+
+    /// Post a CGEvent scroll of `lines` lines in `direction`.
+    fn scroll_lines(direction: MWheelDirection, lines: i64) -> Result<(), io::Error> {
         let event = Self::make_event()?;
         event.set_type(CGEventType::ScrollWheel);
         match direction {
-            MWheelDirection::Down => event.set_integer_value_field(
-                EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_1,
-                distance as i64,
-            ),
-            MWheelDirection::Up => event.set_integer_value_field(
-                EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_1,
-                -(distance as i64),
-            ),
-            MWheelDirection::Left => event.set_integer_value_field(
-                EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_2,
-                distance as i64,
-            ),
-            MWheelDirection::Right => event.set_integer_value_field(
-                EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_2,
-                -(distance as i64),
-            ),
+            MWheelDirection::Down => {
+                event.set_integer_value_field(EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_1, lines)
+            }
+            MWheelDirection::Up => {
+                event.set_integer_value_field(EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_1, -lines)
+            }
+            MWheelDirection::Left => {
+                event.set_integer_value_field(EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_2, lines)
+            }
+            MWheelDirection::Right => {
+                event.set_integer_value_field(EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_2, -lines)
+            }
         }
         // Mouse control only seems to work with CGEventTapLocation::HID.
         event.post(CGEventTapLocation::HID);

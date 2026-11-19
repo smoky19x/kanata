@@ -70,6 +70,7 @@ pub struct CfgMacosOptions {
     pub macos_dev_names_include: Option<Vec<String>>,
     pub macos_dev_names_exclude: Option<Vec<String>>,
     pub macos_continue_if_no_devs_found: bool,
+    pub macos_mouse_wheel_hid: bool,
 }
 
 #[cfg(any(
@@ -715,6 +716,13 @@ pub fn parse_defcfg(expr: &[SExpr]) -> Result<CfgOptions> {
                         #[cfg(any(target_os = "macos", target_os = "unknown"))]
                         {
                             cfg.macos_opts.macos_continue_if_no_devs_found =
+                                parse_defcfg_val_bool(val, label)?
+                        }
+                    }
+                    "macos-mouse-wheel-hid" => {
+                        #[cfg(any(target_os = "macos", target_os = "unknown"))]
+                        {
+                            cfg.macos_opts.macos_mouse_wheel_hid =
                                 parse_defcfg_val_bool(val, label)?
                         }
                     }

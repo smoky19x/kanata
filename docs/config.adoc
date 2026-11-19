@@ -1531,8 +1531,9 @@ The mouse wheel actions are:
 All of these actions accept two number strings. The first is the interval
 (unit: ms) between scroll actions. The second number is the distance
 (unit: arbitrary). In both Linux and Windows, 120 distance units is equivalent
-to a notch movement on a physical wheel. You can play with the parameters to
-see what feels correct to you. Both numbers must be in the range [1,65535].
+to a notch movement on a physical wheel. On macOS, the distance is in lines,
+unless <<macos-only-macos-mouse-wheel-hid,`macos-mouse-wheel-hid`>> is enabled.
+You can play with the parameters to see what feels correct to you. Both numbers must be in the range [1,65535].
 
 NOTE: In Linux, not all desktop environments support the `REL_WHEEL_HI_RES` event.
 If this is the case for yours,
@@ -5583,6 +5584,44 @@ because the default enumeration always finds the built-in keyboard.
 (defcfg
   macos-dev-names-include ("My BT Keyboard")
   macos-continue-if-no-devs-found yes
+)
+----
+
+[[macos-only-macos-mouse-wheel-hid]]
+=== macOS only: macos-mouse-wheel-hid
+
+By default, kanata scrolls on macOS with synthesized scroll events,
+and the distance of the mouse wheel actions is in lines.
+macOS does not apply its scroll acceleration to these events,
+and some features, such as zooming with a modifier key and the wheel
+(Accessibility), do not react to them.
+
+With `macos-mouse-wheel-hid yes`, kanata scrolls through the
+Karabiner VirtualHIDDevice pointing device, as it does for mouse buttons,
+so macOS handles the scrolling like a physical wheel.
+Distances then use the same unit as on Linux and Windows:
+120 is one notch, and a smaller distance is carried over
+until it adds up to a whole notch.
+How far one notch scrolls depends on the macOS scroll settings.
+While the pointing device is not ready,
+kanata sends the same notches as synthesized scroll events, one line per notch.
+
+This applies to all wheel output, e.g. `mwheel-*`, `mwheel-accel-*`
+and `mwu`, `mwd`, `mwl`, `mwr`.
+Configs written for macOS without this option use distances in lines,
+so increase them when enabling it.
+
+.Example:
+[source]
+----
+(defcfg
+  macos-mouse-wheel-hid yes
+)
+
+(defalias
+  ;; one notch every 50 ms, as on Linux and Windows
+  mwd (mwheel-down 50 120)
+  mwu (mwheel-up 50 120)
 )
 ----
 
