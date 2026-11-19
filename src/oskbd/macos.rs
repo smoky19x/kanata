@@ -1529,7 +1529,7 @@ impl KbdOut {
     /// pointing device, as mouse buttons do, so macOS handles them like a
     /// physical wheel; what is left below a notch is carried to the next
     /// scroll. While the pointing device is not ready, the same notches go out
-    /// as CGEvent lines, so a config means the same on both paths.
+    /// as CGEvent lines, so a config scrolls the same distance on both paths.
     pub fn scroll(&mut self, direction: MWheelDirection, distance: u16) -> Result<(), io::Error> {
         if !self.mouse_wheel_hid.get() {
             return Self::scroll_lines(direction, distance.into());

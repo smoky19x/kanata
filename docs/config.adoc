@@ -1533,7 +1533,8 @@ All of these actions accept two number strings. The first is the interval
 (unit: arbitrary). In both Linux and Windows, 120 distance units is equivalent
 to a notch movement on a physical wheel. On macOS, the distance is in lines,
 unless <<macos-only-macos-mouse-wheel-hid,`macos-mouse-wheel-hid`>> is enabled.
-You can play with the parameters to see what feels correct to you. Both numbers must be in the range [1,65535].
+You can play with the parameters to see what feels correct to you.
+Both numbers must be in the range [1,65535].
 
 NOTE: In Linux, not all desktop environments support the `REL_WHEEL_HI_RES` event.
 If this is the case for yours,
@@ -5602,9 +5603,13 @@ so macOS handles the scrolling like a physical wheel.
 Distances then use the same unit as on Linux and Windows:
 120 is one notch, and a smaller distance is carried over
 until it adds up to a whole notch.
-How far one notch scrolls depends on the macOS scroll settings.
+How far one notch scrolls depends on the macOS scroll settings,
+and the direction follows the Natural scrolling setting, as with a physical wheel.
 While the pointing device is not ready,
 kanata sends the same notches as synthesized scroll events, one line per notch.
+The option needs the DriverKit VirtualHIDDevice (macOS 11 or later);
+on older macOS versions, the wheel output is lost, as mouse buttons
+through the pointing device are.
 
 This applies to all wheel output, e.g. `mwheel-*`, `mwheel-accel-*`
 and `mwu`, `mwd`, `mwl`, `mwr`.
